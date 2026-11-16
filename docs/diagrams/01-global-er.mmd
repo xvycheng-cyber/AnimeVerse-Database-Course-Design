@@ -1,0 +1,135 @@
+erDiagram
+    SYS_USER {
+        BIGINT id PK
+        VARCHAR username UK
+        VARCHAR password_hash
+        VARCHAR nickname
+        VARCHAR email UK
+        TINYINT status
+    }
+    SYS_ROLE {
+        SMALLINT id PK
+        VARCHAR role_code UK
+        VARCHAR role_name UK
+    }
+    SYS_USER_ROLE {
+        BIGINT user_id PK,FK
+        SMALLINT role_id PK,FK
+        DATETIME assigned_at
+        BIGINT assigned_by FK
+    }
+    SYS_USER_PROFILE {
+        BIGINT user_id PK,FK
+        VARCHAR bio
+        DATE birthday
+        SMALLINT preferred_genre_id FK
+        TINYINT profile_visibility
+    }
+    ANIME_STUDIO {
+        BIGINT id PK
+        VARCHAR studio_name UK
+        VARCHAR studio_name_en
+        SMALLINT founded_year
+        VARCHAR website_url
+    }
+    ANIME {
+        BIGINT id PK
+        VARCHAR title
+        BIGINT studio_id FK
+        DATE release_date
+        VARCHAR status
+        INT episode_count
+        DECIMAL average_rating
+        INT favorite_count
+        INT review_count
+        BIGINT view_count
+    }
+    ANIME_GENRE {
+        SMALLINT id PK
+        VARCHAR genre_name UK
+        VARCHAR genre_slug UK
+    }
+    ANIME_GENRE_RELATION {
+        BIGINT anime_id PK,FK
+        SMALLINT genre_id PK,FK
+    }
+    ANIME_EPISODE {
+        BIGINT id PK
+        BIGINT anime_id FK
+        SMALLINT episode_number
+        VARCHAR title
+        DATE air_date
+    }
+    ANIME_STAFF {
+        BIGINT id PK
+        VARCHAR staff_name
+        DATE birth_date
+        VARCHAR country
+    }
+    ANIME_STAFF_RELATION {
+        BIGINT anime_id PK,FK
+        BIGINT staff_id PK,FK
+        VARCHAR role_type PK
+    }
+    STREAMING_PLATFORM {
+        SMALLINT id PK
+        VARCHAR platform_name UK
+        VARCHAR platform_code UK
+        VARCHAR website_url
+    }
+    ANIME_PLATFORM_RELATION {
+        BIGINT anime_id PK,FK
+        SMALLINT platform_id PK,FK
+        VARCHAR external_url
+        DATE available_from
+        DATE available_until
+    }
+    USER_FAVORITE {
+        BIGINT user_id PK,FK
+        BIGINT anime_id PK,FK
+        DATETIME created_at
+    }
+    USER_WATCH_HISTORY {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT episode_id FK
+        INT progress_seconds
+        TINYINT completed
+        DATETIME last_watched_at
+    }
+    ANIME_REVIEW {
+        BIGINT id PK
+        BIGINT anime_id FK
+        BIGINT user_id FK
+        TINYINT rating
+        VARCHAR content
+        TINYINT status
+    }
+    OPERATION_LOG {
+        BIGINT id PK
+        BIGINT operator_user_id FK
+        VARCHAR action_type
+        VARCHAR target_type
+        BIGINT target_id
+        DATETIME created_at
+    }
+
+    SYS_USER ||--o{ SYS_USER_ROLE : "assigned"
+    SYS_ROLE ||--o{ SYS_USER_ROLE : "contains"
+    SYS_USER ||--o| SYS_USER_PROFILE : "has profile"
+    ANIME_GENRE ||--o{ SYS_USER_PROFILE : "preferred genre"
+    ANIME_STUDIO ||--o{ ANIME : "produces"
+    ANIME ||--o{ ANIME_GENRE_RELATION : "classified"
+    ANIME_GENRE ||--o{ ANIME_GENRE_RELATION : "labels"
+    ANIME ||--o{ ANIME_EPISODE : "contains"
+    ANIME ||--o{ ANIME_STAFF_RELATION : "credits"
+    ANIME_STAFF ||--o{ ANIME_STAFF_RELATION : "works on"
+    ANIME ||--o{ ANIME_PLATFORM_RELATION : "streams"
+    STREAMING_PLATFORM ||--o{ ANIME_PLATFORM_RELATION : "offers"
+    SYS_USER ||--o{ USER_FAVORITE : "favorites"
+    ANIME ||--o{ USER_FAVORITE : "favorited by"
+    SYS_USER ||--o{ USER_WATCH_HISTORY : "watches"
+    ANIME_EPISODE ||--o{ USER_WATCH_HISTORY : "viewed as"
+    SYS_USER ||--o{ ANIME_REVIEW : "writes"
+    ANIME ||--o{ ANIME_REVIEW : "receives"
+    SYS_USER o|--o{ OPERATION_LOG : "operates"

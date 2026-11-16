@@ -1,0 +1,86 @@
+erDiagram
+    SYS_USER {
+        BIGINT id PK
+        VARCHAR username UK
+        VARCHAR password_hash
+        VARCHAR nickname
+        VARCHAR email UK
+        TINYINT status
+    }
+    SYS_ROLE {
+        SMALLINT id PK
+        VARCHAR role_code UK
+        VARCHAR role_name UK
+    }
+    SYS_USER_ROLE {
+        BIGINT user_id PK,FK
+        SMALLINT role_id PK,FK
+        DATETIME assigned_at
+        BIGINT assigned_by FK
+    }
+    SYS_USER_PROFILE {
+        BIGINT user_id PK,FK
+        VARCHAR bio
+        DATE birthday
+        SMALLINT preferred_genre_id FK
+        TINYINT profile_visibility
+    }
+    USER_FAVORITE {
+        BIGINT user_id PK,FK
+        BIGINT anime_id PK,FK
+        DATETIME created_at
+    }
+    USER_WATCH_HISTORY {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT episode_id FK
+        INT progress_seconds
+        TINYINT completed
+        DATETIME last_watched_at
+    }
+    ANIME_REVIEW {
+        BIGINT id PK
+        BIGINT anime_id FK
+        BIGINT user_id FK
+        TINYINT rating
+        VARCHAR content
+        TINYINT status
+    }
+    OPERATION_LOG {
+        BIGINT id PK
+        BIGINT operator_user_id FK
+        VARCHAR action_type
+        VARCHAR target_type
+        BIGINT target_id
+        VARCHAR ip_address
+        DATETIME created_at
+    }
+    ANIME {
+        BIGINT id PK
+        VARCHAR title
+        INT favorite_count
+        INT review_count
+        BIGINT view_count
+    }
+    ANIME_EPISODE {
+        BIGINT id PK
+        BIGINT anime_id FK
+        SMALLINT episode_number
+    }
+    ANIME_GENRE {
+        SMALLINT id PK
+        VARCHAR genre_name UK
+    }
+
+    SYS_USER ||--o{ SYS_USER_ROLE : "has"
+    SYS_ROLE ||--o{ SYS_USER_ROLE : "granted to"
+    SYS_USER ||--o| SYS_USER_PROFILE : "owns one profile"
+    ANIME_GENRE ||--o{ SYS_USER_PROFILE : "preferred by"
+    SYS_USER ||--o{ USER_FAVORITE : "creates"
+    ANIME ||--o{ USER_FAVORITE : "receives"
+    SYS_USER ||--o{ USER_WATCH_HISTORY : "records"
+    ANIME_EPISODE ||--o{ USER_WATCH_HISTORY : "watched"
+    SYS_USER ||--o{ ANIME_REVIEW : "posts"
+    ANIME ||--o{ ANIME_REVIEW : "reviewed"
+    SYS_USER o|--o{ OPERATION_LOG : "produces"
+

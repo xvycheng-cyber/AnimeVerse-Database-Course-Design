@@ -1,0 +1,104 @@
+{
+  "generatedAt": "2026-11-16T08:33:05.874Z",
+  "baseUrl": "http://127.0.0.1:5173",
+  "results": [
+    {
+      "name": "Genre UI CRUD",
+      "status": "PASS",
+      "id": 36
+    },
+    {
+      "name": "Studio UI CRUD",
+      "status": "PASS",
+      "id": 24
+    },
+    {
+      "name": "Platform UI CRUD",
+      "status": "PASS",
+      "id": 22
+    },
+    {
+      "name": "Staff UI CRUD",
+      "status": "PASS",
+      "id": 36
+    },
+    {
+      "name": "Episode UI CRUD",
+      "status": "PASS",
+      "id": 92
+    },
+    {
+      "name": "Anime UI CRUD",
+      "status": "PASS",
+      "id": 69
+    },
+    {
+      "name": "Role UI CRUD",
+      "status": "PASS",
+      "id": 18
+    },
+    {
+      "name": "User role restoration and unchanged save",
+      "status": "PASS",
+      "evidence": "selected=普通用户"
+    },
+    {
+      "name": "Anime score column uses averageRating and aggregate fields stay readonly",
+      "status": "PASS",
+      "evidence": "rating=10.0; editableAggregates=none"
+    },
+    {
+      "name": "Hidden review can be restored and deleted",
+      "status": "PASS",
+      "evidence": "reviewId=59; visible/hidden/visible/delete"
+    },
+    {
+      "name": "Favorite list state is correct on first click",
+      "status": "PASS",
+      "evidence": "animeId=17; first click removed favorite"
+    },
+    {
+      "name": "Screenshot 01-home.png",
+      "status": "PASS",
+      "route": "/"
+    },
+    {
+      "name": "Screenshot 02-anime-list.png",
+      "status": "PASS",
+      "route": "/anime"
+    },
+    {
+      "name": "Screenshot 03-anime-detail.png",
+      "status": "PASS",
+      "route": "/anime/8"
+    },
+    {
+      "name": "Screenshot 04-ranking.png",
+      "status": "PASS",
+      "route": "/ranking"
+    },
+    {
+      "name": "Screenshot 05-admin-dashboard.png",
+      "status": "PASS",
+      "route": "/admin"
+    },
+    {
+      "name": "Screenshot 06-database-lab.png",
+      "status": "PASS",
+      "route": "/admin/lab"
+    },
+    {
+      "name": "Screenshot 08-admin-anime-mobile.png",
+      "status": "PASS",
+      "route": "/admin/anime"
+    },
+    {
+      "name": "Screenshot 07-mobile-home.png",
+      "status": "PASS",
+      "route": "/"
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "passed": true
+}

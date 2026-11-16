@@ -1,0 +1,25 @@
+# Runtime secrets
+.env
+*.local
+
+# Java
+backend/target/
+*.class
+*.log
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# IDE and OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Build and delivery intermediates
+dist/*.zip
+docs/screenshots/*.tmp.*
+tools/

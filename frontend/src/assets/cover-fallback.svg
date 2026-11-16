@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="960" viewBox="0 0 720 960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151b35"/>
+      <stop offset="0.55" stop-color="#25204d"/>
+      <stop offset="1" stop-color="#0c1328"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.55">
+      <stop offset="0" stop-color="#7c6cff" stop-opacity=".62"/>
+      <stop offset="1" stop-color="#7c6cff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="720" height="960" fill="url(#bg)"/>
+  <rect width="720" height="960" fill="url(#glow)"/>
+  <circle cx="360" cy="410" r="118" fill="none" stroke="#b6aaff" stroke-width="4" opacity=".8"/>
+  <path d="M250 510 360 286l110 224-110-54z" fill="#c9c2ff" opacity=".92"/>
+  <text x="360" y="660" fill="#f6f4ff" font-family="Arial, sans-serif" font-size="42" font-weight="700" text-anchor="middle">ANIMEVERSE</text>
+  <text x="360" y="710" fill="#a8a6c9" font-family="Arial, sans-serif" font-size="24" text-anchor="middle">封面暂不可用</text>
+</svg>

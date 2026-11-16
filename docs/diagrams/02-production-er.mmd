@@ -1,0 +1,71 @@
+erDiagram
+    ANIME_STUDIO {
+        BIGINT id PK
+        VARCHAR studio_name UK
+        VARCHAR studio_name_en
+        SMALLINT founded_year
+        VARCHAR website_url
+    }
+    ANIME {
+        BIGINT id PK
+        VARCHAR title
+        BIGINT studio_id FK
+        DATE release_date
+        VARCHAR status
+        INT episode_count
+        DECIMAL average_rating
+        INT favorite_count
+        INT review_count
+    }
+    ANIME_EPISODE {
+        BIGINT id PK
+        BIGINT anime_id FK
+        SMALLINT episode_number
+        VARCHAR title
+        INT duration_seconds
+        DATE air_date
+    }
+    ANIME_GENRE {
+        SMALLINT id PK
+        VARCHAR genre_name UK
+        VARCHAR genre_slug UK
+    }
+    ANIME_GENRE_RELATION {
+        BIGINT anime_id PK,FK
+        SMALLINT genre_id PK,FK
+    }
+    ANIME_STAFF {
+        BIGINT id PK
+        VARCHAR staff_name
+        VARCHAR staff_name_jp
+        DATE birth_date
+        VARCHAR country
+    }
+    ANIME_STAFF_RELATION {
+        BIGINT anime_id PK,FK
+        BIGINT staff_id PK,FK
+        VARCHAR role_type PK
+    }
+    STREAMING_PLATFORM {
+        SMALLINT id PK
+        VARCHAR platform_name UK
+        VARCHAR platform_code UK
+        VARCHAR website_url
+    }
+    ANIME_PLATFORM_RELATION {
+        BIGINT anime_id PK,FK
+        SMALLINT platform_id PK,FK
+        VARCHAR external_url
+        DATE available_from
+        DATE available_until
+    }
+
+    ANIME_STUDIO ||--o{ ANIME : "produces many titles"
+    ANIME ||--o{ ANIME_EPISODE : "contains episodes"
+    ANIME ||--o{ ANIME_GENRE_RELATION : "has genres"
+    ANIME_GENRE ||--o{ ANIME_GENRE_RELATION : "classifies"
+    ANIME ||--o{ ANIME_STAFF_RELATION : "has credits"
+    ANIME_STAFF ||--o{ ANIME_STAFF_RELATION : "participates"
+    ANIME ||--o{ ANIME_PLATFORM_RELATION : "available on"
+    STREAMING_PLATFORM ||--o{ ANIME_PLATFORM_RELATION : "carries"
+
