@@ -22,7 +22,7 @@ const filters = reactive({
   genreId: String(route.query.genreId || ''),
   studioId: String(route.query.studioId || ''),
   status: String(route.query.status || ''),
-  sort: String(route.query.sort || 'popular')
+  sort: String(route.query.sort || 'favorites')
 })
 
 const statusOptions = [
@@ -33,8 +33,8 @@ const statusOptions = [
 ]
 
 const sortOptions = [
-  { label: '收藏最多', value: 'popular' },
-  { label: '评分最高', value: 'score' },
+  { label: '收藏最多', value: 'favorites' },
+  { label: '评分最高', value: 'rating' },
   { label: '最新上线', value: 'latest' },
   { label: '标题排序', value: 'title' }
 ]
@@ -61,7 +61,7 @@ async function loadAnime() {
         ...(filters.genreId ? { genreId: filters.genreId } : {}),
         ...(filters.studioId ? { studioId: filters.studioId } : {}),
         ...(filters.status ? { status: filters.status } : {}),
-        ...(filters.sort !== 'popular' ? { sort: filters.sort } : {}),
+        ...(filters.sort !== 'favorites' ? { sort: filters.sort } : {}),
         ...(page.value > 1 ? { page: String(page.value) } : {})
       }
     })
@@ -82,7 +82,7 @@ function resetFilters() {
   filters.genreId = ''
   filters.studioId = ''
   filters.status = ''
-  filters.sort = 'popular'
+  filters.sort = 'favorites'
   search()
 }
 

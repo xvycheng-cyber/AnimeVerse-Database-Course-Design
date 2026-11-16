@@ -20,7 +20,7 @@ const form = reactive({
 const rules: FormRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 32, message: '用户名长度应为 3 至 32 个字符', trigger: 'blur' },
+    { min: 4, max: 32, message: '用户名长度应为 4 至 32 个字符', trigger: 'blur' },
     {
       pattern: /^[a-zA-Z0-9_]+$/,
       message: '用户名只能包含字母、数字和下划线',

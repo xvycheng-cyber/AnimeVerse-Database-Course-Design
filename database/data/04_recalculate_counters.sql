@@ -27,6 +27,7 @@ LEFT JOIN (
            COUNT(*) AS rating_count,
            ROUND(AVG(rating), 2) AS average_rating
     FROM anime_review
+    WHERE status = 1
     GROUP BY anime_id
 ) r ON r.anime_id = a.id
 SET a.review_count = COALESCE(r.review_count, 0),
@@ -41,4 +42,3 @@ LEFT JOIN (
     GROUP BY e.anime_id
 ) v ON v.anime_id = a.id
 SET a.view_count = COALESCE(v.view_count, 0);
-

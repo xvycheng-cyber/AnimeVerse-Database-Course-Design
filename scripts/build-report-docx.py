@@ -131,6 +131,15 @@ def set_font(run, name: str, size: float, *, bold=False, color=BLACK, italic=Fal
     run.font.color.rgb = color
 
 
+def remove_style_borders(style) -> None:
+    p_pr = style.element.find(qn("w:pPr"))
+    if p_pr is None:
+        return
+    borders = p_pr.find(qn("w:pBdr"))
+    if borders is not None:
+        p_pr.remove(borders)
+
+
 def configure_styles(doc: Document) -> None:
     normal = doc.styles["Normal"]
     normal.font.name = BODY_FONT
@@ -148,6 +157,7 @@ def configure_styles(doc: Document) -> None:
     }
     for style_name, (size, bold) in heading_specs.items():
         style = doc.styles[style_name]
+        remove_style_borders(style)
         style.font.name = HEADING_FONT
         style._element.rPr.rFonts.set(qn("w:eastAsia"), HEADING_FONT)
         style.font.size = Pt(size)
@@ -295,7 +305,7 @@ def add_image(doc: Document, source: Path, alt: str, figure_number: int) -> None
         return
 
     max_width = 6.3
-    max_height = 7.55
+    max_height = 6.2
     width = max_width
     if width * aspect > max_height:
         width = max_height / aspect
@@ -413,6 +423,12 @@ def first_pass(markdown: str) -> tuple[str, list[str], list[str]]:
     return title, metadata, headings
 
 
+def starts_new_page(heading: str) -> bool:
+    return heading == "摘要" or bool(
+        re.match(r"^第[一二三四五六七八九十百零〇两]+章(?:\s|$)", heading)
+    )
+
+
 def build_document(input_path: Path, output_path: Path) -> None:
     markdown = input_path.read_text(encoding="utf-8")
     title, metadata, headings = first_pass(markdown)
@@ -478,7 +494,7 @@ def build_document(input_path: Path, output_path: Path) -> None:
 
         if stripped.startswith("## "):
             heading = doc.add_heading(stripped[3:].strip(), level=1)
-            if not first_h2:
+            if not first_h2 and starts_new_page(stripped[3:].strip()):
                 heading.paragraph_format.page_break_before = True
             first_h2 = False
             heading.paragraph_format.space_before = Pt(0)

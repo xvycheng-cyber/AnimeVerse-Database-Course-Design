@@ -37,6 +37,14 @@ WHERE table_schema = 'anime_platform'
   AND table_name = 'anime'
   AND index_name = 'uk_anime_title_release_key';
 
+SELECT 'legacy_nullable_title_key_removed' AS check_name,
+       COUNT(DISTINCT index_name) AS actual_value,
+       IF(COUNT(DISTINCT index_name) = 0, 'PASS', 'FAIL') AS result
+FROM information_schema.statistics
+WHERE table_schema = 'anime_platform'
+  AND table_name = 'anime'
+  AND index_name = 'uk_anime_title_release';
+
 SELECT 'all_tables_innodb_utf8mb4' AS check_name,
        COUNT(*) AS noncompliant_tables,
        IF(COUNT(*) = 0, 'PASS', 'FAIL') AS result

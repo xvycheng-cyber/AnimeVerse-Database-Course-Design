@@ -162,6 +162,11 @@ Invoke-TestFile `
     -CheckAssertionRows
 
 Invoke-TestFile `
+    -Name 'Counter recalculation excludes hidden reviews' `
+    -RelativePath 'database/tests/04_recalculate_counter_tests.sql' `
+    -CheckAssertionRows
+
+Invoke-TestFile `
     -Name 'All core and supporting tables CRUD transaction' `
     -RelativePath 'database/crud/core_crud.sql'
 
@@ -181,9 +186,19 @@ Invoke-ExpectedFailure `
     -ExpectedPatterns @('3819')
 
 Invoke-ExpectedFailure `
+    -Name 'Three-character username is rejected by CHECK' `
+    -RelativePath 'database/tests/expected_invalid_username.sql' `
+    -ExpectedPatterns @('3819')
+
+Invoke-ExpectedFailure `
     -Name 'Duplicate title with NULL release date is rejected' `
     -RelativePath 'database/tests/expected_duplicate_null_release_title.sql' `
     -ExpectedPatterns @('1062')
+
+Invoke-ExpectedFailure `
+    -Name 'Course view rejects UPDATE' `
+    -RelativePath 'database/tests/expected_view_update.sql' `
+    -ExpectedPatterns @('1288')
 
 $exceptionResult = Invoke-CommandResult -Sql "CALL sp_transaction_demo(1, 'exception', @tx_result);"
 $exceptionPassed = $exceptionResult.ExitCode -ne 0 -and $exceptionResult.Output -match '1644|intentional transaction exception'

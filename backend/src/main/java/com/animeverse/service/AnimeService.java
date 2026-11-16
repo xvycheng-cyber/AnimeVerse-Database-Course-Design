@@ -43,7 +43,7 @@ import java.util.Set;
 public class AnimeService {
 
     private static final Set<String> ALLOWED_SORTS =
-            Set.of("latest", "rating", "releaseDate", "favorites", "views");
+            Set.of("latest", "rating", "releaseDate", "favorites", "views", "title", "popular", "score");
     private static final Set<String> ALLOWED_STAFF_ROLES = Set.of(
             "DIRECTOR", "SERIES_COMPOSITION", "MUSIC", "ORIGINAL_CREATOR",
             "CHARACTER_DESIGN", "VOICE_ACTOR", "PRODUCER", "ANIMATION_DIRECTOR"
@@ -73,7 +73,7 @@ public class AnimeService {
             String sort,
             boolean publicOnly
     ) {
-        String safeSort = ALLOWED_SORTS.contains(sort) ? sort : "latest";
+        String safeSort = normalizeSort(sort);
         String normalizedStatus = status == null || status.isBlank()
                 ? null
                 : normalizeStatus(status);
@@ -224,6 +224,18 @@ public class AnimeService {
             case "AIRING", "ONGOING", "PAUSED" -> "AIRING";
             case "COMPLETED", "FINISHED" -> "COMPLETED";
             default -> throw BusinessException.badRequest("动漫状态不合法");
+        };
+    }
+
+    private static String normalizeSort(String sort) {
+        String requested = sort == null || sort.isBlank() ? "favorites" : sort.trim();
+        if (!ALLOWED_SORTS.contains(requested)) {
+            return "favorites";
+        }
+        return switch (requested) {
+            case "popular" -> "favorites";
+            case "score" -> "rating";
+            default -> requested;
         };
     }
 

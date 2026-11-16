@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-11-16T10:01:01.340Z",
+  "focus": "lab",
+  "baseUrl": "http://127.0.0.1:5173",
+  "results": [
+    {
+      "name": "Database lab five tabs execute real database objects",
+      "status": "PASS",
+      "evidence": "views=30; trigger=1->2->1; studio=京都动画; ranking=6; cursor=8; transactions=commit/rollback/exception"
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "passed": true
+}

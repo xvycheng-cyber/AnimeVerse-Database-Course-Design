@@ -1,5 +1,7 @@
 # 星漫云数据库课程设计最终独立审查
 
+> **历史材料：已被 2026-11-16 第三方独立复核取代。** 本文保留审计过程，但其中 `98/100`、14 个唯一约束、51 个索引和 `19/19` 浏览器结果不再作为当前有效结论。当前结论以 `third-party-independent-review.md`、`third-party-retest-report.md` 和 `final-score-report.md` 为准。
+
 审查日期：2026-11-16  
 审查身份：独立数据库课程设计验收教师、第三方软件审计视角  
 审查对象：AnimeVerse-Database-Course-Design 当前工作区、实时 MySQL 数据库、运行中的前后端、测试脚本、截图、Markdown/DOCX 报告与最终 ZIP。

@@ -98,7 +98,7 @@ RBAC 角色字典。
 | studio_id | BIGINT UNSIGNED | N | - | FK→anime_studio RESTRICT | 制作厂商 |
 | synopsis | TEXT | Y | NULL | - | 简介 |
 | cover_url | VARCHAR(500) | Y | NULL | - | 封面地址 |
-| release_date | DATE | Y | NULL | UK 组合 | 首播/发行日期 |
+| release_date | DATE | Y | NULL | 参与函数唯一键 | 首播/发行日期 |
 | end_date | DATE | Y | NULL | CHECK 日期顺序 | 完结日期 |
 | status | VARCHAR(20) | N | COMPLETED | CHECK 枚举 | UPCOMING/AIRING/COMPLETED |
 | episode_count | INT UNSIGNED | N | 0 | 触发器维护，应用只读 | 集数统计 |
@@ -110,7 +110,7 @@ RBAC 角色字典。
 | created_at | DATETIME | N | CURRENT_TIMESTAMP | - | 创建时间 |
 | updated_at | DATETIME | N | CURRENT_TIMESTAMP | ON UPDATE | 更新时间 |
 
-索引：`uk_anime_title_release(title, release_date)`、函数唯一索引 `uk_anime_title_release_key(title, COALESCE(release_date, '1900-01-01'))`、厂商、状态+日期、评分、互动热度。函数索引用于关闭 MySQL 普通唯一索引在 NULL 日期上的重复漏洞。
+索引：函数唯一索引 `uk_anime_title_release_key(title, COALESCE(release_date, '1900-01-01'))`、厂商、状态+日期、评分、互动热度。函数索引将空日期归一化后参与去重，避免 MySQL 普通唯一索引允许多条同名 NULL 日期记录。
 
 ## 7. anime_genre
 
@@ -287,7 +287,7 @@ RBAC 角色字典。
 
 - 17 张业务表全部使用 InnoDB、utf8mb4。
 - 主键全部显式定义。
-- 实测 20 个外键、23 个 CHECK 约束、14 个唯一约束和 51 个索引，覆盖用户、内容、互动和审计边界。
+- 实测 20 个外键、23 个 CHECK 约束、13 个唯一约束和 50 个统计索引，覆盖用户、内容、互动和审计边界。
 - 每张核心表至少一个业务约束或唯一索引；关系表使用复合主键避免重复。
 - 动漫聚合字段只由触发器、回算脚本和数据库实验室的受控操作维护，后端普通 CRUD 不提供写入字段。
 - 计数回算脚本：`database/data/04_recalculate_counters.sql`。

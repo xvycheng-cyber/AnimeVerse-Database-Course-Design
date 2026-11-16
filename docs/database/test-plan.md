@@ -17,10 +17,16 @@
 | CRUD | 17 表真实新增/查询/更新/删除并回滚 | `crud/core_crud.sql` |
 | 重复约束 | 重复收藏、重复评论必须失败 | `expected_duplicate_*.sql` |
 | 域约束 | 评分 11 必须失败 | `expected_invalid_rating.sql` |
+| 用户名域约束 | 3 字符用户名必须失败 | `expected_invalid_username.sql` |
+| NULL 日期候选键 | 同名且发行日期均为 NULL 必须失败 | `expected_duplicate_null_release_title.sql` |
+| 视图更新能力 | 课程视图实际 UPDATE 必须被拒绝 | `expected_view_update.sql` |
+| 统计回算 | 隐藏评论不得计入评论数和平均分 | `04_recalculate_counter_tests.sql` |
 | 异常事务 | `SIGNAL` 后回滚且无日志残留 | `test-database.ps1` |
 | 复杂查询 | 18 条查询全部执行 | `queries/complex_queries.sql` |
 | 脚本安全 | 无 DROP DATABASE、无硬编码真实 DB 密码、PS 语法通过 | `test-database.ps1` |
 | 权限 | 应用账户连接和目标库最小权限 | `bootstrap-database.ps1` + `SHOW GRANTS` |
+| API 契约 | 登录、注册、RBAC、六种排序、实验室和事务模式 | `scripts/test-api.ps1` |
+| 浏览器 | 用户主路径、管理端 13 路由、CRUD、实验室、截图 | `scripts/browser-focused-check.mjs` |
 
 ## 3. 正向测试
 
@@ -37,8 +43,11 @@
 1. 同一用户重复收藏同一动漫 → 1062。
 2. 同一用户重复评论同一动漫 → 1062。
 3. 评论评分 11 → CHECK 3819。
-4. 不存在厂商/作品调用过程 → SQLSTATE 45000。
-5. 事务 exception 模式 → SQLSTATE 45000 且回滚。
+4. 用户名长度 3 → CHECK 3819。
+5. 同名动漫且发行日期均为 NULL → 1062。
+6. 对课程视图执行 UPDATE → 1288。
+7. 不存在厂商/作品调用过程 → SQLSTATE 45000。
+8. 事务 exception 模式 → SQLSTATE 45000 且回滚。
 
 ## 5. 测试隔离
 
@@ -54,4 +63,3 @@
 - 断言输出中没有 `FAIL` 行。
 - 所有预期失败均以正确错误码非零退出。
 - 脚本安全静态检查无命中。
-

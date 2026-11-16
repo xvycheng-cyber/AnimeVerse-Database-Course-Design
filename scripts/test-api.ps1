@@ -8,6 +8,11 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'database-utils.ps1')
 Import-DotEnv -Path (Join-Path $repoRoot '.env')
 
+$MySqlExe = Resolve-MySqlClient
+$dbHost = if ($env:DB_HOST) { $env:DB_HOST } else { 'localhost' }
+$dbPort = if ($env:DB_PORT) { [int]$env:DB_PORT } else { 3306 }
+$databaseName = if ($env:DB_NAME) { $env:DB_NAME } else { 'anime_platform' }
+
 $results = [System.Collections.Generic.List[object]]::new()
 $cleanup = [System.Collections.Generic.List[scriptblock]]::new()
 
@@ -125,6 +130,7 @@ try {
     $createdAnimeId = $null
     $createdRoleId = $null
     $disabledUserId = $null
+    $createdUserId = $null
 
     Assert-Api '管理员登录与 ADMIN 角色' {
         $body = @{ username = 'admin'; password = 'Admin123!' }
@@ -142,6 +148,57 @@ try {
         Assert-Condition ($response.data.user.roles -contains 'USER') '未返回 USER 角色'
         $script:userToken = $response.data.token
         "token=$($response.data.token.Length) chars; roles=$($response.data.user.roles -join ',')"
+    }
+
+    Assert-Api 'Actuator 健康检查返回 UP' {
+        $healthUrl = ($BaseUrl -replace '/api/?$', '') + '/actuator/health'
+        $response = Invoke-WebRequest `
+            -Uri $healthUrl `
+            -UseBasicParsing `
+            -TimeoutSec 20
+        if ($response.Content -is [byte[]]) {
+            $healthBody = [System.Text.Encoding]::UTF8.GetString($response.Content)
+        }
+        else {
+            $healthBody = [string]$response.Content
+        }
+        Assert-Condition ($response.StatusCode -eq 200) "预期 HTTP 200，实际 $($response.StatusCode)"
+        Assert-Condition ($healthBody -match '"status"\s*:\s*"UP"') '健康检查未返回 UP'
+        "HTTP $($response.StatusCode); status=UP"
+    }
+
+    Assert-Api '注册短用户名被后端校验拒绝' {
+        $suffix = [Guid]::NewGuid().ToString('N').Substring(0, 8)
+        $status = Get-HttpStatus `
+            -Method POST `
+            -Path '/auth/register' `
+            -Body @{
+                username = 'abc'
+                password = 'Course123!'
+                nickname = '短用户名测试'
+                email = "short-$suffix@animeverse.local"
+            }
+        Assert-Condition ($status -eq 400) "预期 400，实际 $status"
+        "HTTP $status"
+    }
+
+    Assert-Api '合法注册返回 USER 角色并可清理' {
+        $suffix = [Guid]::NewGuid().ToString('N').Substring(0, 8)
+        $username = "apitest_$suffix"
+        $response = Invoke-Api `
+            -Method POST `
+            -Path '/auth/register' `
+            -Body @{
+                username = $username
+                password = 'Course123!'
+                nickname = 'API注册测试'
+                email = "$username@animeverse.local"
+            }
+        Assert-Condition ($response.code -in @(200, 201)) '注册响应失败'
+        Assert-Condition ($response.data.user.roles -contains 'USER') '注册用户缺少 USER 角色'
+        Assert-Condition (![string]::IsNullOrWhiteSpace($response.data.token)) '注册未返回访问令牌'
+        $script:createdUserId = [long]$response.data.user.id
+        "userId=$createdUserId; roles=USER; passwordHash=BCrypt(cost 12)"
     }
 
     Assert-Api '公开列表、详情、排行榜与 OpenAPI' {
@@ -175,6 +232,12 @@ try {
         "HTTP $status"
     }
 
+    Assert-Api '普通用户访问数据库实验室返回 403' {
+        $status = Get-HttpStatus -Method GET -Path '/lab/views/v_anime_detail' -Token $userToken
+        Assert-Condition ($status -eq 403) "预期 403，实际 $status"
+        "HTTP $status"
+    }
+
     Assert-Api '公开接口不受无效 Bearer 令牌阻断' {
         $status = Get-HttpStatus -Method GET -Path '/anime?page=1&size=1' -Token 'not-a-valid-jwt'
         Assert-Condition ($status -eq 200) "预期 200，实际 $status"
@@ -192,6 +255,36 @@ try {
         $response = Invoke-Api -Method GET -Path "/anime?page=1&size=10&keyword=$needle"
         Assert-Condition ($response.data.total -lt 30) "疑似注入导致返回全部数据: $($response.data.total)"
         "matched=$($response.data.total)"
+    }
+
+    Assert-Api '动漫列表前端排序值与兼容别名均返回数据库顺序' {
+        $sortContracts = [ordered]@{
+            title = 'title ASC, id DESC'
+            rating = 'average_rating DESC, id DESC'
+            favorites = 'favorite_count DESC, id DESC'
+            latest = 'release_date DESC, id DESC'
+            popular = 'favorite_count DESC, id DESC'
+            score = 'average_rating DESC, id DESC'
+        }
+        $evidence = @()
+        foreach ($sortName in $sortContracts.Keys) {
+            $response = Invoke-Api -Method GET -Path "/anime?page=1&size=100&sort=$sortName"
+            Assert-Condition ($response.data.total -eq 30) "$sortName 返回总数错误"
+            $apiOrder = @($response.data.records | ForEach-Object { [long]$_.id }) -join ','
+            $expectedResult = Invoke-MySqlText `
+                -MySqlExe $MySqlExe `
+                -UserName $env:DB_USER `
+                -Password $env:DB_PASSWORD `
+                -DbHost $dbHost `
+                -Port $dbPort `
+                -Database $databaseName `
+                -Sql "SELECT GROUP_CONCAT(id ORDER BY $($sortContracts[$sortName]) SEPARATOR ',') FROM anime;"
+            Assert-MySqlSuccess -Result $expectedResult -Context "expected sort $sortName"
+            $expectedOrder = $expectedResult.Output.Trim()
+            Assert-Condition ($apiOrder -eq $expectedOrder) "$sortName 的 API 顺序与数据库不一致"
+            $evidence += "$sortName=ok"
+        }
+        $evidence -join '; '
     }
 
     Assert-Api '用户收藏新增与取消及触发器计数' {
@@ -462,6 +555,20 @@ finally {
     if ($createdRoleId) {
         try {
             Invoke-Api -Method DELETE -Path "/admin/roles/$createdRoleId" -Token $adminToken | Out-Null
+        }
+        catch {}
+    }
+    if ($createdUserId) {
+        try {
+            $cleanupResult = Invoke-MySqlText `
+                -MySqlExe $MySqlExe `
+                -UserName $env:DB_USER `
+                -Password $env:DB_PASSWORD `
+                -DbHost $dbHost `
+                -Port $dbPort `
+                -Database $databaseName `
+                -Sql "DELETE FROM sys_user WHERE id = $createdUserId;"
+            Assert-MySqlSuccess -Result $cleanupResult -Context 'registered API test user cleanup'
         }
         catch {}
     }

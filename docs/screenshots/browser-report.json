@@ -1,104 +1,97 @@
 {
-  "generatedAt": "2026-11-16T08:33:05.874Z",
+  "generatedAt": "2026-11-16T10:02:34.340Z",
+  "focus": "screens",
   "baseUrl": "http://127.0.0.1:5173",
   "results": [
     {
-      "name": "Genre UI CRUD",
+      "name": "Desktop user screenshots come from live pages",
       "status": "PASS",
-      "id": 36
+      "evidence": "01-home.png, 02-anime-list.png, 03-anime-detail.png, 04-ranking.png"
     },
     {
-      "name": "Studio UI CRUD",
+      "name": "Desktop admin screenshots come from live pages",
       "status": "PASS",
-      "id": 24
+      "evidence": "05-admin-dashboard.png, 06-database-lab.png"
     },
     {
-      "name": "Platform UI CRUD",
+      "name": "Mobile admin screenshot has no horizontal overflow",
       "status": "PASS",
-      "id": 22
+      "evidence": "08-admin-anime-mobile.png"
     },
     {
-      "name": "Staff UI CRUD",
+      "name": "Mobile user screenshot has no horizontal overflow",
       "status": "PASS",
-      "id": 36
-    },
-    {
-      "name": "Episode UI CRUD",
-      "status": "PASS",
-      "id": 92
-    },
-    {
-      "name": "Anime UI CRUD",
-      "status": "PASS",
-      "id": 69
-    },
-    {
-      "name": "Role UI CRUD",
-      "status": "PASS",
-      "id": 18
-    },
-    {
-      "name": "User role restoration and unchanged save",
-      "status": "PASS",
-      "evidence": "selected=普通用户"
-    },
-    {
-      "name": "Anime score column uses averageRating and aggregate fields stay readonly",
-      "status": "PASS",
-      "evidence": "rating=10.0; editableAggregates=none"
-    },
-    {
-      "name": "Hidden review can be restored and deleted",
-      "status": "PASS",
-      "evidence": "reviewId=59; visible/hidden/visible/delete"
-    },
-    {
-      "name": "Favorite list state is correct on first click",
-      "status": "PASS",
-      "evidence": "animeId=17; first click removed favorite"
-    },
-    {
-      "name": "Screenshot 01-home.png",
-      "status": "PASS",
-      "route": "/"
-    },
-    {
-      "name": "Screenshot 02-anime-list.png",
-      "status": "PASS",
-      "route": "/anime"
-    },
-    {
-      "name": "Screenshot 03-anime-detail.png",
-      "status": "PASS",
-      "route": "/anime/8"
-    },
-    {
-      "name": "Screenshot 04-ranking.png",
-      "status": "PASS",
-      "route": "/ranking"
-    },
-    {
-      "name": "Screenshot 05-admin-dashboard.png",
-      "status": "PASS",
-      "route": "/admin"
-    },
-    {
-      "name": "Screenshot 06-database-lab.png",
-      "status": "PASS",
-      "route": "/admin/lab"
-    },
-    {
-      "name": "Screenshot 08-admin-anime-mobile.png",
-      "status": "PASS",
-      "route": "/admin/anime"
-    },
-    {
-      "name": "Screenshot 07-mobile-home.png",
-      "status": "PASS",
-      "route": "/"
+      "evidence": "07-mobile-home.png"
     }
   ],
   "issues": [],
   "warnings": [],
-  "passed": true
+  "passed": true,
+  "focusedSuites": {
+    "user": {
+      "generatedAt": "2026-11-16T10:00:54.201Z",
+      "focus": "user",
+      "baseUrl": "http://127.0.0.1:5173",
+      "results": [
+        {
+          "name": "Registration validation rejects empty and short usernames",
+          "status": "PASS",
+          "evidence": "empty required fields and 3-character username rejected client-side"
+        },
+        {
+          "name": "Home, catalog, pagination, sort, detail, studios, ranking and guard",
+          "status": "PASS",
+          "evidence": "home=10/8; pagination=咒术回战->电锯人; sorts=favorites=咒术回战|rating=钢之炼金术师 FULLMETAL ALCHEMIST|latest=葬送的芙莉莲|title=Fate/stay night [Unlimited Blade Works]; episodes=2; studios=8; podium=3; additionalRoutes=6; adminGuard=redirected"
+        }
+      ],
+      "issues": [],
+      "warnings": [],
+      "passed": true
+    },
+    "admin": {
+      "generatedAt": "2026-11-16T10:00:58.858Z",
+      "focus": "admin",
+      "baseUrl": "http://127.0.0.1:5173",
+      "results": [
+        {
+          "name": "All admin modules render from live API pages",
+          "status": "PASS",
+          "evidence": "13 routes; canvases=2; nonblank=2"
+        },
+        {
+          "name": "Genre CRUD works through browser controls",
+          "status": "PASS",
+          "evidence": "id=56; create/search/update/delete"
+        },
+        {
+          "name": "User role dialog restores persisted USER role",
+          "status": "PASS",
+          "evidence": "selected=普通用户; unchanged save"
+        },
+        {
+          "name": "Review visibility and delete controls work through browser",
+          "status": "PASS",
+          "evidence": "id=95; visible/hidden/visible/delete"
+        }
+      ],
+      "issues": [],
+      "warnings": [],
+      "passed": true
+    },
+    "lab": {
+      "generatedAt": "2026-11-16T10:01:01.340Z",
+      "focus": "lab",
+      "baseUrl": "http://127.0.0.1:5173",
+      "results": [
+        {
+          "name": "Database lab five tabs execute real database objects",
+          "status": "PASS",
+          "evidence": "views=30; trigger=1->2->1; studio=京都动画; ranking=6; cursor=8; transactions=commit/rollback/exception"
+        }
+      ],
+      "issues": [],
+      "warnings": [],
+      "passed": true
+    }
+  }
 }

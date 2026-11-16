@@ -51,6 +51,7 @@ public interface AnimeMapper extends BaseMapper<Anime> {
               CASE WHEN #{sort} = 'favorites' THEN a.favorite_count END DESC,
               CASE WHEN #{sort} = 'views' THEN a.view_count END DESC,
               CASE WHEN #{sort} = 'latest' THEN a.release_date END DESC,
+              CASE WHEN #{sort} = 'title' THEN a.title END ASC,
               a.id DESC
             </script>
             """)

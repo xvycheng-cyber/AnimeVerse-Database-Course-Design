@@ -1,0 +1,30 @@
+{
+  "generatedAt": "2026-11-16T10:02:34.340Z",
+  "focus": "screens",
+  "baseUrl": "http://127.0.0.1:5173",
+  "results": [
+    {
+      "name": "Desktop user screenshots come from live pages",
+      "status": "PASS",
+      "evidence": "01-home.png, 02-anime-list.png, 03-anime-detail.png, 04-ranking.png"
+    },
+    {
+      "name": "Desktop admin screenshots come from live pages",
+      "status": "PASS",
+      "evidence": "05-admin-dashboard.png, 06-database-lab.png"
+    },
+    {
+      "name": "Mobile admin screenshot has no horizontal overflow",
+      "status": "PASS",
+      "evidence": "08-admin-anime-mobile.png"
+    },
+    {
+      "name": "Mobile user screenshot has no horizontal overflow",
+      "status": "PASS",
+      "evidence": "07-mobile-home.png"
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "passed": true
+}

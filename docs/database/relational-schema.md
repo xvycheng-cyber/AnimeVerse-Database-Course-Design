@@ -50,7 +50,7 @@
 - 用户 `username`、`email`。
 - 角色 `role_code`、`role_name`。
 - 厂商 `studio_name`。
-- 动漫 `(title, release_date)`，并由函数唯一索引 `uk_anime_title_release_key(title, COALESCE(release_date, '1900-01-01'))` 处理日期为 NULL 的同名作品。
+- 动漫标题与发行日期的业务候选键由函数唯一索引 `uk_anime_title_release_key(title, COALESCE(release_date, '1900-01-01'))` 实现；空日期统一映射为 `1900-01-01` 后参与去重，不再保留会放过多个 NULL 组合的普通唯一索引。
 - 类型 `genre_name`、`genre_slug`。
 - 集数 `(anime_id, episode_number)`。
 - 平台 `platform_name`、`platform_code`。
@@ -80,4 +80,4 @@
 - 评论：动漫+创建时间、用户。
 - 日志：用户+时间、动作+时间、目标对象。
 
-`uk_anime_title_release_key` 是 MySQL 8.0 表达式索引，用来补充普通唯一约束对 NULL 不生效的语义缺口。实测数据库共有 51 个索引。
+`uk_anime_title_release_key` 是 MySQL 8.0 表达式索引，用来补齐“标题 + 发行日期”候选键在 NULL 日期上的语义。2026-11-16 实库核验共有 13 个 UNIQUE 约束和 50 个统计索引。

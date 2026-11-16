@@ -8,7 +8,7 @@
 | 角色 | `sys_role.id` | `role_code`, `role_name` |
 | 用户资料 | `sys_user_profile.user_id` | 与用户同键，一对一 |
 | 制作厂商 | `anime_studio.id` | `studio_name` |
-| 动漫 | `anime.id` | `(title, release_date)` |
+| 动漫 | `anime.id` | `(title, COALESCE(release_date, '1900-01-01'))`，由函数唯一索引实现 |
 | 类型 | `anime_genre.id` | `genre_name`, `genre_slug` |
 | 剧集 | `anime_episode.id` | `(anime_id, episode_number)` |
 | 制作人员 | `anime_staff.id` | 名称配合人员明细使用 |
@@ -71,4 +71,6 @@
 
 实体表的非键字段只描述本实体。类型名称、厂商名称、平台名称不冗余存储在动漫表中，而是通过外键和关系表引用。`v_anime_detail` 中出现的类型名称和厂商名称是只读查询视图，不是基表冗余。
 
-动漫聚合字段是受控派生数据，其来源完全可追溯且由触发器和回算脚本维护，应用写入 DTO 和后台表单不提供这些字段。它们是读取性能设计的一部分，不是不可解释的传递依赖。
+若严格按教材中的纯关系模型定义，动漫表的 `episode_count`、`favorite_count`、`review_count`、`rating_count`、`average_rating` 和 `view_count` 属于从明细关系派生的冗余字段，因此不能宣称物理数据库“完全无冗余”。逻辑模型已经将多值属性和关系拆分为独立表，核心实体满足第三范式；物理层在上述字段上采用了受控反规范化。
+
+这些派生字段只用于读取性能，由 12 个触发器、后台只读字段契约、隐藏评论过滤回算脚本和数据库测试共同维护。普通 CRUD DTO 与后台编辑表单均不提供写入入口，因此这种冗余属于可解释、可追溯的物理设计取舍，而不是未声明的传递依赖。

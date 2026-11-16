@@ -18,12 +18,33 @@ CREATE TABLE IF NOT EXISTS sys_user (
     CONSTRAINT pk_sys_user PRIMARY KEY (id),
     CONSTRAINT uk_sys_user_username UNIQUE (username),
     CONSTRAINT uk_sys_user_email UNIQUE (email),
-    CONSTRAINT ck_sys_user_username CHECK (REGEXP_LIKE(username, '^[A-Za-z0-9_]{3,32}$')),
+    CONSTRAINT ck_sys_user_username CHECK (REGEXP_LIKE(username, '^[A-Za-z0-9_]{4,32}$')),
     CONSTRAINT ck_sys_user_password CHECK (password_hash LIKE '$2%'),
     CONSTRAINT ck_sys_user_email CHECK (email LIKE '%@%.%'),
     CONSTRAINT ck_sys_user_status CHECK (status IN (0, 1))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
   COMMENT='Application users and BCrypt credentials';
+
+-- Keep the database minimum aligned with the registration API and UI.
+SET @username_check_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'sys_user'
+      AND CONSTRAINT_NAME = 'ck_sys_user_username'
+      AND CONSTRAINT_TYPE = 'CHECK'
+);
+SET @username_check_drop_sql = IF(
+    @username_check_exists > 0,
+    'ALTER TABLE sys_user DROP CHECK ck_sys_user_username',
+    'SELECT 1'
+);
+PREPARE username_check_drop_stmt FROM @username_check_drop_sql;
+EXECUTE username_check_drop_stmt;
+DEALLOCATE PREPARE username_check_drop_stmt;
+ALTER TABLE sys_user
+    ADD CONSTRAINT ck_sys_user_username
+    CHECK (REGEXP_LIKE(username, '^[A-Za-z0-9_]{4,32}$'));
 
 CREATE TABLE IF NOT EXISTS sys_role (
     id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -139,7 +160,6 @@ CREATE TABLE IF NOT EXISTS anime (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT pk_anime PRIMARY KEY (id),
-    CONSTRAINT uk_anime_title_release UNIQUE (title, release_date),
     CONSTRAINT fk_anime_studio FOREIGN KEY (studio_id)
         REFERENCES anime_studio (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
     CONSTRAINT ck_anime_status CHECK (status IN ('UPCOMING', 'AIRING', 'COMPLETED')),
@@ -172,6 +192,25 @@ SET @anime_title_key_index_sql = IF(
 PREPARE anime_title_key_index_stmt FROM @anime_title_key_index_sql;
 EXECUTE anime_title_key_index_stmt;
 DEALLOCATE PREPARE anime_title_key_index_stmt;
+
+-- Earlier course builds also created a plain UNIQUE(title, release_date).
+-- The functional unique index above covers all rows, including NULL dates,
+-- so remove the legacy key when upgrading an existing database.
+SET @anime_legacy_title_key_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'anime'
+      AND INDEX_NAME = 'uk_anime_title_release'
+);
+SET @anime_legacy_title_key_sql = IF(
+    @anime_legacy_title_key_exists > 0,
+    'ALTER TABLE anime DROP INDEX uk_anime_title_release',
+    'SELECT 1'
+);
+PREPARE anime_legacy_title_key_stmt FROM @anime_legacy_title_key_sql;
+EXECUTE anime_legacy_title_key_stmt;
+DEALLOCATE PREPARE anime_legacy_title_key_stmt;
 
 CREATE TABLE IF NOT EXISTS anime_genre_relation (
     anime_id BIGINT UNSIGNED NOT NULL,

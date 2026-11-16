@@ -23,4 +23,12 @@
 
 课程演示账号与数据库对象清单会在初始化完成后写入 `docs/manuals/测试账号.md`。
 
+## 验收与测试材料
+
+- 第三方独立审查：`docs/reports/third-party-independent-review.md`
+- 问题整改记录：`docs/reports/third-party-correction-report.md`
+- 整改后复测：`docs/reports/third-party-retest-report.md`
+- 最终模拟评分：`docs/reports/final-score-report.md`
+- 浏览器证据：`docs/screenshots/browser-report.json`
+
 > 本项目中的数据库密码仅用于本地课程演示，不可用于公网部署。

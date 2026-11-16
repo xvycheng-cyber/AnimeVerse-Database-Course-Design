@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-11-16T10:00:54.201Z",
+  "focus": "user",
+  "baseUrl": "http://127.0.0.1:5173",
+  "results": [
+    {
+      "name": "Registration validation rejects empty and short usernames",
+      "status": "PASS",
+      "evidence": "empty required fields and 3-character username rejected client-side"
+    },
+    {
+      "name": "Home, catalog, pagination, sort, detail, studios, ranking and guard",
+      "status": "PASS",
+      "evidence": "home=10/8; pagination=咒术回战->电锯人; sorts=favorites=咒术回战|rating=钢之炼金术师 FULLMETAL ALCHEMIST|latest=葬送的芙莉莲|title=Fate/stay night [Unlimited Blade Works]; episodes=2; studios=8; podium=3; additionalRoutes=6; adminGuard=redirected"
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "passed": true
+}

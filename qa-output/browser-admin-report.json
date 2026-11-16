@@ -1,0 +1,30 @@
+{
+  "generatedAt": "2026-11-16T10:00:58.858Z",
+  "focus": "admin",
+  "baseUrl": "http://127.0.0.1:5173",
+  "results": [
+    {
+      "name": "All admin modules render from live API pages",
+      "status": "PASS",
+      "evidence": "13 routes; canvases=2; nonblank=2"
+    },
+    {
+      "name": "Genre CRUD works through browser controls",
+      "status": "PASS",
+      "evidence": "id=56; create/search/update/delete"
+    },
+    {
+      "name": "User role dialog restores persisted USER role",
+      "status": "PASS",
+      "evidence": "selected=普通用户; unchanged save"
+    },
+    {
+      "name": "Review visibility and delete controls work through browser",
+      "status": "PASS",
+      "evidence": "id=95; visible/hidden/visible/delete"
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "passed": true
+}

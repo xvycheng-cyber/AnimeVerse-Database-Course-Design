@@ -17,12 +17,15 @@
 | 17 表 CRUD 回滚测试 | PASS |
 | 重复收藏/重复评论负向测试 | PASS，均返回 1062 |
 | 评分越界负向测试 | PASS，返回 3819 |
+| 3 字符用户名负向测试 | PASS，返回 3819 |
 | 同标题且发行日期为 NULL 的重复测试 | PASS，返回 1062 |
+| 课程视图实际 UPDATE | PASS，按预期被拒绝并返回 1288 |
+| 隐藏评论回算 | PASS，评论数和平均分只统计可见评论 |
 | 18 条复杂查询 | PASS |
 | `mysqlcheck --check` 物理检查 | PASS，17/17 表 OK |
 | 静态安全/语法检查 | PASS |
 | BCrypt 实际校验 | PASS，`admin=True`, `sakura=True` |
-| 最终 PowerShell 测试汇总 | **17/17 PASS** |
+| 最终 PowerShell 测试汇总 | **20/20 PASS（2026-11-16 本轮）** |
 
 ## 2. 实际数据库对象
 
@@ -31,8 +34,8 @@
 | 业务表 | 17（16 核心 + `sys_user_profile`） |
 | 外键 | 20 |
 | CHECK 约束 | 23 |
-| 唯一约束 | 14 |
-| 索引 | 51 |
+| 唯一约束 | 13 |
+| 索引 | 50 |
 | 视图 | 4 |
 | 触发器 | 12 |
 | 存储过程 | 6 |
@@ -146,11 +149,14 @@ $env:MYSQL_ADMIN_PASSWORD='<local admin password>'
 [PASS] Administrator sees all 12 triggers - count=12
 [PASS] Trigger counter assertions
 [PASS] Function, procedure, cursor and transaction assertions
+[PASS] Counter recalculation excludes hidden reviews
 [PASS] All core and supporting tables CRUD transaction
 [PASS] Duplicate favorite is rejected - 1062
 [PASS] Duplicate review is rejected - 1062
 [PASS] Rating above 10 is rejected by CHECK - 3819
+[PASS] Three-character username is rejected by CHECK - 3819
 [PASS] Duplicate title with NULL release date is rejected - 1062
+[PASS] Course view rejects UPDATE - 1288
 [PASS] Transaction exception rolls back and raises SIGNAL
 [PASS] Exception transaction left no log row - count=0
 [PASS] sp_add_anime commits valid row
@@ -160,7 +166,7 @@ $env:MYSQL_ADMIN_PASSWORD='<local admin password>'
 [PASS] No hard-coded 123456 database password in SQL
 [PASS] PowerShell syntax parse
 
-Database test summary: 17/17 passed.
+Database test summary: 20/20 passed.
 ```
 
 ## 5. BCrypt 实测
@@ -184,7 +190,7 @@ trigger_count_9  0  FAIL
 
 原因：测试使用最小权限应用账户，MySQL 不向缺少 `TRIGGER` 权限的账户展示 `information_schema.TRIGGERS` 元数据。业务触发器本身已经通过行为测试。
 
-修正：没有给 `Chengzi` 增加 `TRIGGER` 权限；把静态触发器清单校验移到管理员连接，应用账户继续只执行 DML/过程。后续补充回归项后复跑为 17/17 通过。
+修正：没有给 `Chengzi` 增加 `TRIGGER` 权限；把静态触发器清单校验移到管理员连接，应用账户继续只执行 DML/过程。后续补充回归项后复跑为 20/20 通过。
 
 最终浏览器/API 联调还暴露了一个测试隔离问题：API 实验室会保留一条成功的
 `TRANSACTION_DEMO_COMMIT` 审计记录，数据库测试如果直接按动作类型计数就会同时看到这条
@@ -198,7 +204,7 @@ trigger_count_9  0  FAIL
 3. 收藏、观看和剧集关系发生键值迁移时，原触发器只处理插入/删除。现新增三个 UPDATE 触发器，使旧作品计数减一、新作品计数加一。
 4. MySQL 普通 `UNIQUE(title, release_date)` 允许多行日期为 NULL 的同名作品。现增加函数唯一索引 `uk_anime_title_release_key`，将空日期归一化后再参与唯一性判断。
 
-上述改动新增了计数器迁移、重复改分和空日期同名作品回归测试，最终数据库测试由 16 项扩展为 17 项。
+上述改动新增了计数器迁移、重复改分、空日期同名作品、短用户名、只读视图和隐藏评论回算测试，最终数据库测试为 20 项。
 
 最终复验还修复了测试工具自身的 Windows PowerShell 5.1 兼容问题。`mysql.exe` 在预期重复键、CHECK 违反和事务 SIGNAL 场景会向 stderr 输出错误；原封装在 `$ErrorActionPreference='Stop'` 下会提前终止脚本。现在原生命令执行期间使用 `Continue` 收集输出，并严格以退出码断言预期失败，因此负向测试不再依赖调用 shell 的版本或错误流行为。
 
@@ -211,7 +217,7 @@ trigger_count_9  0  FAIL
 - SQL 文件中未检出生产式 `123456` 密码赋值。
 - 应用账户没有使用全局管理员权限。
 - 三张 Mermaid 源文件已由 Playwright + Mermaid 11 实际渲染为 SVG/PNG，并完成视觉检查。
-- 四个视图均执行了实际行数断言：详情 30、厂商 8、热度 30、用户活动 10。
+- 四个视图均执行了实际行数断言：详情 30、厂商 8、热度 30、用户活动 10；对 `v_anime_popularity` 的实际 UPDATE 返回 MySQL 1288，未仅依据 `information_schema` 元数据推断可更新性。
 - 事务断言同时验证 commit 日志可见、rollback 日志不可见、exception 日志不可见。
 - 管理员连接实测触发器为 12 个，其中收藏、观看和剧集各包含 INSERT、UPDATE、DELETE 三种事件。
 - `uk_anime_title_release_key` 已阻止同标题且发行日期为 NULL 的重复插入。

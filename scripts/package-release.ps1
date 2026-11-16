@@ -107,11 +107,16 @@ $requiredEntries = @(
     "$rootName/database/schema/01_tables.sql",
     "$rootName/docs/reports/数据库课程设计报告.docx",
     "$rootName/docs/reports/AI交互报告.docx",
+    "$rootName/docs/reports/third-party-independent-review.md",
+    "$rootName/docs/reports/third-party-correction-report.md",
+    "$rootName/docs/reports/third-party-retest-report.md",
+    "$rootName/docs/reports/final-score-report.md",
     "$rootName/docs/reports/final-independent-review.md",
     "$rootName/docs/reports/final-correction-report.md",
     "$rootName/docs/reports/final-acceptance-report.md",
     "$rootName/docs/diagrams/01-global-er.png",
-    "$rootName/docs/screenshots/01-home.png"
+    "$rootName/docs/screenshots/01-home.png",
+    "$rootName/docs/screenshots/browser-report.json"
 )
 
 $verificationArchive = [System.IO.Compression.ZipFile]::OpenRead($OutputPath)
@@ -163,6 +168,10 @@ try {
         'database/schema/01_tables.sql',
         'docs/reports/数据库课程设计报告.docx',
         'docs/reports/AI交互报告.docx',
+        'docs/reports/third-party-independent-review.md',
+        'docs/reports/third-party-correction-report.md',
+        'docs/reports/third-party-retest-report.md',
+        'docs/reports/final-score-report.md',
         'docs/reports/final-independent-review.md',
         'docs/reports/final-correction-report.md',
         'docs/reports/final-acceptance-report.md'
@@ -183,6 +192,8 @@ finally {
 }
 
 $archiveInfo = Get-Item -LiteralPath $OutputPath
+$hash = Get-FileHash -LiteralPath $OutputPath -Algorithm SHA256
 Write-Host "Packaged $($entryNames.Count) files."
 Write-Host "ZIP: $($archiveInfo.FullName)"
 Write-Host "Size: $([Math]::Round($archiveInfo.Length / 1MB, 2)) MB"
+Write-Host "SHA256: $($hash.Hash)"

@@ -97,6 +97,24 @@ async function clickButton(text, scope = 'body') {
   if (!clicked) throw new Error(`Button not found: ${text}`)
 }
 
+async function clickElementByText(selector, text, exact = true) {
+  const clicked = await page.evaluate(
+    ({ elementSelector, expectedText, requireExact }) => {
+      const candidates = [...document.querySelectorAll(elementSelector)]
+      const element = candidates.find((candidate) => {
+        const candidateText = candidate.textContent?.trim() || ''
+        return requireExact
+          ? candidateText === expectedText
+          : candidateText.includes(expectedText)
+      })
+      element?.click()
+      return Boolean(element)
+    },
+    { elementSelector: selector, expectedText: text, requireExact: exact }
+  )
+  if (!clicked) throw new Error(`Element not found: ${selector} / ${text}`)
+}
+
 async function clickRowButton(rowText, buttonText) {
   await page.waitForFunction(
     (value) => [...document.querySelectorAll('tbody tr')].some((row) => row.innerText.includes(value)),
@@ -235,6 +253,42 @@ async function setInputByPlaceholder(placeholder, value) {
   )
 }
 
+async function selectFilterOption(index, label) {
+  await page.evaluate((selectIndex) => {
+    const select = document.querySelectorAll('.filter-bar .el-select')[selectIndex]
+    select?.click()
+  }, index)
+  await wait(250)
+  const clicked = await page.evaluate((optionLabel) => {
+    const items = [...document.querySelectorAll('.el-select-dropdown__item')]
+    const item = items.find(
+      (candidate) =>
+        candidate.textContent?.trim() === optionLabel &&
+        candidate.getBoundingClientRect().height > 0
+    )
+    item?.click()
+    return Boolean(item)
+  }, label)
+  if (!clicked) throw new Error(`Select option not found: ${label}`)
+}
+
+async function setVisibleLabNumberInput(value) {
+  const updated = await page.evaluate((nextValue) => {
+    const pane = [...document.querySelectorAll('.el-tab-pane')].find(
+      (candidate) => candidate.getBoundingClientRect().height > 0
+    )
+    const input = pane?.querySelector('.el-input-number input')
+    if (!(input instanceof HTMLInputElement)) return false
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+    setter?.call(input, String(nextValue))
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+    input.dispatchEvent(new FocusEvent('blur', { bubbles: true }))
+    return true
+  }, value)
+  if (!updated) throw new Error('Visible database lab number input was not found')
+}
+
 async function runCheck(name, action) {
   try {
     const evidence = await action()
@@ -345,7 +399,35 @@ async function screenshot(route, filename, waitSelector) {
 }
 
 let token
+let labTriggerAnimeId
 try {
+  await runCheck('Registration form blocks empty and 3-character usernames', async () => {
+    await page.goto(`${baseUrl}/register`, { waitUntil: 'networkidle0', timeout: 30000 })
+    await page.evaluate(() => localStorage.clear())
+    await page.reload({ waitUntil: 'networkidle0', timeout: 30000 })
+    await page.waitForSelector('input[placeholder="字母、数字或下划线"]', { visible: true })
+    await clickButton('创建账号')
+    await page.waitForFunction(
+      () => document.body.innerText.includes('请输入用户名'),
+      { timeout: 5000 }
+    )
+
+    await setInputByPlaceholder('字母、数字或下划线', 'abc')
+    await setInputByPlaceholder('展示名称', '短名测试')
+    await setInputByPlaceholder('name@example.com', 'short-ui@animeverse.local')
+    await setInputByPlaceholder('至少 8 个字符', 'Course123!')
+    await setInputByPlaceholder('再次输入密码', 'Course123!')
+    await clickButton('创建账号')
+    await page.waitForFunction(
+      () => document.body.innerText.includes('用户名长度应为 4 至 32 个字符'),
+      { timeout: 5000 }
+    )
+    if (new URL(page.url()).pathname !== '/register') {
+      throw new Error(`Registration unexpectedly navigated to ${page.url()}`)
+    }
+    return 'empty and 3-character username rejected client-side'
+  })
+
   await login('admin', 'Admin123!', '/admin')
   token = await page.evaluate(() => localStorage.getItem('animeverse_token'))
   if (!token) throw new Error('Admin token was not stored after UI login')
@@ -472,6 +554,34 @@ try {
     },
     searchBefore: `UI角色${uniqueSuffix}`,
     searchAfter: `UI角色${uniqueSuffix}改`
+  })
+
+  await runCheck('Statistics cards and charts render from API data', async () => {
+    await page.goto(`${baseUrl}/admin/statistics`, {
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    })
+    await page.waitForSelector('.statistics-card', { timeout: 15000 })
+    await page.waitForSelector('canvas', { timeout: 15000 })
+    await wait(500)
+    const cardCount = await page.$$eval('.statistics-card', (elements) => elements.length)
+    const chartEvidence = await page.$$eval('canvas', (canvases) =>
+      canvases
+        .filter((canvas) => canvas.getBoundingClientRect().height > 0)
+        .map((canvas) => ({
+          width: canvas.width,
+          height: canvas.height,
+          pixels: canvas
+            .getContext('2d')
+            ?.getImageData(0, 0, canvas.width, canvas.height)
+            .data.some((value, index) => index % 4 === 3 && value > 0)
+        }))
+    )
+    if (cardCount !== 6) throw new Error(`Expected 6 statistics cards, got ${cardCount}`)
+    if (chartEvidence.length < 2 || chartEvidence.some((chart) => !chart.pixels)) {
+      throw new Error(`Statistics charts are blank: ${JSON.stringify(chartEvidence)}`)
+    }
+    return `cards=${cardCount}; canvases=${chartEvidence.length}; nonblank=true`
   })
 
   await runCheck('User role restoration and unchanged save', async () => {
@@ -609,6 +719,104 @@ try {
 
   await page.evaluate(() => localStorage.clear())
   await login('sakura', 'User123!', '/')
+
+  await runCheck('User pages, pagination, sorting and admin guard work', async () => {
+    await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle0', timeout: 30000 })
+    await page.waitForSelector('.anime-card', { timeout: 15000 })
+    const homeCards = await page.$$eval('.anime-card', (elements) => elements.length)
+    const rankingItems = await page.$$eval('.ranking-mini', (elements) => elements.length)
+    if (homeCards < 1 || rankingItems < 1) {
+      throw new Error(`Home content missing: cards=${homeCards}, ranking=${rankingItems}`)
+    }
+
+    await page.goto(`${baseUrl}/anime?page=1`, { waitUntil: 'networkidle0', timeout: 30000 })
+    await page.waitForSelector('.anime-card__title', { timeout: 15000 })
+    const firstPageTitle = await page.$eval('.anime-card__title', (element) =>
+      element.textContent.trim()
+    )
+    const pageTwoResponse = waitForResponse('GET', '/anime?page=2')
+    await clickElementByText('.el-pager li', '2')
+    await assertResponseOk(await pageTwoResponse, 'Anime page 2')
+    await waitForNetwork()
+    const secondPageTitle = await page.$eval('.anime-card__title', (element) =>
+      element.textContent.trim()
+    )
+    if (firstPageTitle === secondPageTitle) {
+      throw new Error('Pagination did not change the visible anime records')
+    }
+
+    await page.goto(`${baseUrl}/anime?page=1&sort=favorites`, {
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    })
+    await page.waitForSelector('.anime-card__title', { timeout: 15000 })
+
+    const sortOptions = [
+      { label: '收藏最多', value: 'favorites' },
+      { label: '评分最高', value: 'rating' },
+      { label: '最新上线', value: 'latest' },
+      { label: '标题排序', value: 'title' }
+    ]
+    const sortEvidence = []
+    for (const option of sortOptions) {
+      const expected = await apiRequest(
+        'GET',
+        `/anime?page=1&size=12&sort=${option.value}`,
+        ''
+      )
+      const expectedTitle = expected.data.records[0]?.title
+      let responsePromise
+      if (option.value !== 'favorites') {
+        responsePromise = waitForResponse('GET', `sort=${option.value}`)
+        await selectFilterOption(2, option.label)
+        await assertResponseOk(await responsePromise, `Anime sort ${option.value}`)
+        await waitForNetwork()
+      }
+      const visibleTitle = await page.$eval('.anime-card__title', (element) =>
+        element.textContent.trim()
+      )
+      if (!expectedTitle || visibleTitle !== expectedTitle) {
+        throw new Error(
+          `Sort ${option.value} mismatch: visible="${visibleTitle}", expected="${expectedTitle}"`
+        )
+      }
+      sortEvidence.push(`${option.value}=${visibleTitle}`)
+    }
+
+    await page.goto(`${baseUrl}/anime/8`, { waitUntil: 'networkidle0', timeout: 30000 })
+    await page.waitForFunction(
+      () => document.querySelector('h1')?.textContent?.includes('葬送的芙莉莲'),
+      { timeout: 15000 }
+    )
+    const episodeCount = await page.$$eval('.episode-item', (elements) => elements.length)
+    if (episodeCount < 1) throw new Error('Anime detail has no episode controls')
+
+    await page.goto(`${baseUrl}/studios`, { waitUntil: 'networkidle0', timeout: 30000 })
+    await page.waitForSelector('.studio-card', { timeout: 15000 })
+    const studioCount = await page.$$eval('.studio-card', (elements) => elements.length)
+    if (studioCount !== 8) throw new Error(`Expected 8 studios, got ${studioCount}`)
+
+    await page.goto(`${baseUrl}/ranking`, { waitUntil: 'networkidle0', timeout: 30000 })
+    await page.waitForSelector('.podium-card', { timeout: 15000 })
+    const podiumCount = await page.$$eval('.podium-card', (elements) => elements.length)
+    if (podiumCount !== 3) throw new Error(`Expected 3 podium cards, got ${podiumCount}`)
+
+    await page.goto(`${baseUrl}/admin`, { waitUntil: 'networkidle0', timeout: 30000 })
+    await page.waitForFunction(
+      () => !window.location.pathname.startsWith('/admin'),
+      { timeout: 5000 }
+    )
+    return [
+      `home=${homeCards}/${rankingItems}`,
+      `pagination=${firstPageTitle}->${secondPageTitle}`,
+      `sorts=${sortEvidence.join('|')}`,
+      `episodes=${episodeCount}`,
+      `studios=${studioCount}`,
+      `podium=${podiumCount}`,
+      'adminGuard=redirected'
+    ].join('; ')
+  })
+
   await runCheck('Favorite list state is correct on first click', async () => {
     const userTokenForFavorite = await apiLogin('sakura', 'User123!')
     const favoritesResponse = await apiRequest('GET', '/user/favorites', userTokenForFavorite)
@@ -676,10 +884,142 @@ try {
   await login('admin', 'Admin123!', '/admin')
   await screenshot('/admin', '05-admin-dashboard.png', '.admin-page-heading')
   await page.goto(`${baseUrl}/admin/lab`, { waitUntil: 'networkidle0', timeout: 30000 })
-  const viewResponsePromise = waitForResponse('GET', '/lab/views/v_anime_detail')
-  await clickButton('执行查询')
-  await assertResponseOk(await viewResponsePromise, 'Database lab view query')
-  await page.waitForSelector('.lab-panel .el-table__row', { timeout: 15000 })
+  await runCheck('Database lab executes all five real tabs', async () => {
+    await page.waitForSelector('.lab-tabs', { timeout: 15000 })
+
+    const viewResponsePromise = waitForResponse('GET', '/lab/views/v_anime_detail')
+    await clickButton('执行查询')
+    await assertResponseOk(await viewResponsePromise, 'Database lab view query')
+    await page.waitForSelector('.lab-panel .el-table__row', { timeout: 15000 })
+    const viewRows = await page.$$eval('.lab-panel .el-table__row', (elements) => elements.length)
+    if (viewRows < 1) throw new Error('View query rendered no rows')
+
+    const favorites = await apiRequest('GET', '/user/favorites', token)
+    const adminFavoriteIds = new Set(
+      (favorites.data || []).map((favorite) => Number(favorite.animeId))
+    )
+    const animeId = Array.from({ length: 30 }, (_, index) => index + 1).find(
+      (candidate) => !adminFavoriteIds.has(candidate)
+    )
+    if (!animeId) throw new Error('No unfavorited anime available for trigger lab')
+
+    await clickElementByText('.el-tabs__item', '触发器')
+    await page.waitForFunction(
+      () =>
+        [...document.querySelectorAll('.el-tab-pane')].some(
+          (element) =>
+            element.getBoundingClientRect().height > 0 &&
+            element.textContent?.includes('收藏计数触发器')
+        ),
+      { timeout: 5000 }
+    )
+    await setVisibleLabNumberInput(animeId)
+    let responsePromise = waitForResponse('POST', '/lab/trigger/favorite')
+    await clickButton('执行触发器')
+    const enabledResponse = await responsePromise
+    await assertResponseOk(enabledResponse, 'Trigger favorite enable')
+    const enabled = await enabledResponse.json()
+    if (enabled.data.afterCount !== enabled.data.beforeCount + 1) {
+      throw new Error('Trigger insert did not increment favorite count')
+    }
+    labTriggerAnimeId = animeId
+
+    await page.evaluate(() => {
+      const pane = [...document.querySelectorAll('.el-tab-pane')].find(
+        (candidate) => candidate.getBoundingClientRect().height > 0
+      )
+      pane?.querySelector('.el-switch')?.click()
+    })
+    await wait(200)
+    responsePromise = waitForResponse('POST', '/lab/trigger/favorite')
+    await clickButton('执行触发器')
+    const disabledResponse = await responsePromise
+    await assertResponseOk(disabledResponse, 'Trigger favorite disable')
+    const disabled = await disabledResponse.json()
+    if (disabled.data.afterCount !== disabled.data.beforeCount - 1) {
+      throw new Error('Trigger delete did not decrement favorite count')
+    }
+    labTriggerAnimeId = undefined
+
+    await clickElementByText('.el-tabs__item', '存储过程')
+    await clickElementByText('.el-radio-button', '厂商统计')
+    await page.waitForSelector('.el-radio-button.is-active', { timeout: 5000 })
+    await setVisibleLabNumberInput(1)
+    responsePromise = waitForResponse('GET', '/lab/procedure/studio-statistics/1')
+    await clickButton('查询厂商统计')
+    const studioResponse = await responsePromise
+    await assertResponseOk(studioResponse, 'Studio statistics procedure')
+    const studio = await studioResponse.json()
+    if (studio.data.studioId !== 1) throw new Error('Studio statistics returned wrong studio')
+
+    await clickElementByText('.el-radio-button', '动漫排行')
+    await page.waitForSelector('.el-radio-button.is-active', { timeout: 5000 })
+    await setVisibleLabNumberInput(6)
+    responsePromise = waitForResponse('GET', '/lab/procedure/anime-ranking')
+    await clickButton('查询排行')
+    const rankingResponse = await responsePromise
+    await assertResponseOk(rankingResponse, 'Anime ranking procedure')
+    const ranking = await rankingResponse.json()
+    if (ranking.data.length !== 6) {
+      throw new Error(`Ranking procedure expected 6 rows, got ${ranking.data.length}`)
+    }
+
+    await clickElementByText('.el-tabs__item', '游标')
+    responsePromise = waitForResponse('GET', '/lab/cursor/studio-report')
+    await clickButton('执行游标')
+    const cursorResponse = await responsePromise
+    await assertResponseOk(cursorResponse, 'Studio cursor report')
+    const cursor = await cursorResponse.json()
+    if (cursor.data.length !== 8) {
+      throw new Error(`Cursor report expected 8 studios, got ${cursor.data.length}`)
+    }
+
+    await clickElementByText('.el-tabs__item', '事务')
+    for (const mode of ['COMMIT', 'ROLLBACK', 'EXCEPTION']) {
+      responsePromise = waitForResponse('POST', '/lab/transaction/demo')
+      await clickElementByText('.transaction-button', mode, false)
+      const transactionResponse = await responsePromise
+      await assertResponseOk(transactionResponse, `Transaction ${mode}`)
+      const payload = await transactionResponse.json()
+      if (mode === 'EXCEPTION') {
+        if (
+          payload.data?.rolledBack !== true ||
+          payload.data?.visibleRows !== 0 ||
+          !String(payload.data?.error || '').includes('intentional transaction exception')
+        ) {
+          throw new Error(`Unexpected exception rollback payload: ${JSON.stringify(payload)}`)
+        }
+      } else {
+        if (
+          (mode === 'COMMIT' &&
+            (payload.data?.committed !== true || payload.data?.visibleRows !== 1)) ||
+          (mode === 'ROLLBACK' &&
+            (payload.data?.rolledBack !== true || payload.data?.visibleRows !== 0))
+        ) {
+          throw new Error(`Unexpected ${mode} payload: ${JSON.stringify(payload)}`)
+        }
+      }
+      await page.waitForFunction(
+        () =>
+          [...document.querySelectorAll('.transaction-button')].every(
+            (button) => !button.disabled
+          ),
+        { timeout: 10000 }
+      )
+    }
+
+    return [
+      `views=${viewRows}`,
+      `trigger=${enabled.data.beforeCount}->${enabled.data.afterCount}->${disabled.data.afterCount}`,
+      `procedureStudio=${studio.data.studioName}`,
+      `ranking=${ranking.data.length}`,
+      `cursor=${cursor.data.length}`,
+      'transactions=commit/rollback/exception'
+    ].join('; ')
+  })
+
+  await clickElementByText('.el-tabs__item', '视图查询')
+  await wait(300)
   await page.screenshot({ path: path.join(screenshotDir, '06-database-lab.png'), fullPage: true })
   results.push({ name: 'Screenshot 06-database-lab.png', status: 'PASS', route: '/admin/lab' })
 
@@ -698,6 +1038,11 @@ try {
   if (token) {
     for (const entry of createdIds) {
       await apiRequest('DELETE', `${entry.endpoint}/${entry.id}`, token).catch(() => undefined)
+    }
+    if (labTriggerAnimeId) {
+      await apiRequest('DELETE', `/user/favorites/${labTriggerAnimeId}`, token).catch(
+        () => undefined
+      )
     }
   }
   await browser.close()
